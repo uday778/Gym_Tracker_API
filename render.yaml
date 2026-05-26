@@ -25,19 +25,19 @@ services:
         fromService:
           name: gym-tracker-redis
           type: keyvalue
-          property: host
+          property: connectionString
 
       - key: SPRING_DATA_REDIS_PORT
         fromService:
           name: gym-tracker-redis
           type: keyvalue
-          property: port
+          property: connectionString
 
       - key: SPRING_DATA_REDIS_PASSWORD
         fromService:
           name: gym-tracker-redis
           type: keyvalue
-          property: password
+          property: connectionString
 
       # ── JWT ──────────────────────────────────────────────────
       - key: JWT_SECRET
