@@ -59,4 +59,6 @@ services:
       url: mysql:8.0
 
     disk:
-    ipAllowList: []
+      name: mysql-data
+      mountPath: /var/lib/mysql
+      sizeGB: 10
