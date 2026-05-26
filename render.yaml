@@ -1,86 +1,62 @@
-# render.yaml — Render Blueprint
-# Declares all three services in one file so `render deploy` provisions
-# the Spring Boot app, MySQL database, and Redis instance in a single command.
-#
-# Deploy steps:
-#   1. Push this repo to GitHub.
-#   2. In Render dashboard → New → Blueprint → connect your repo.
-#   3. Render reads this file and creates all services automatically.
-#   4. Set JWT_SECRET manually in the Render dashboard (or let generateValue handle it).
-
 services:
-
-  # ── Spring Boot Web Service ──────────────────────────────────────────────────
+  # ─────────────────────────────────────────────────────────────
+  # Spring Boot API
+  # ─────────────────────────────────────────────────────────────
   - type: web
     name: gym-tracker-api
     runtime: docker
-    plan: starter            # upgrade to standard/pro for production workloads
+    plan: starter
+    autoDeploy: true
     healthCheckPath: /actuator/health
-    autoDeploy: true         # redeploy automatically on every push to main
 
     envVars:
-      # ── Database (auto-injected from the MySQL service below) ────────────────
+      # ── MySQL ────────────────────────────────────────────────
       - key: SPRING_DATASOURCE_URL
-        fromDatabase:
-          name: gym-tracker-db
-          property: connectionString
+        value: jdbc:mysql://gym-tracker-db:3306/gymtracker?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
 
       - key: SPRING_DATASOURCE_USERNAME
-        fromDatabase:
-          name: gym-tracker-db
-          property: user
+        value: gymuser
 
       - key: SPRING_DATASOURCE_PASSWORD
-        fromDatabase:
-          name: gym-tracker-db
-          property: password
+        value: strongpassword
 
-      # ── Redis (auto-injected from the Redis service below) ───────────────────
+      # ── Redis ────────────────────────────────────────────────
       - key: SPRING_DATA_REDIS_HOST
         fromService:
           name: gym-tracker-redis
-          type: redis
+          type: keyvalue
           property: host
 
       - key: SPRING_DATA_REDIS_PORT
         fromService:
           name: gym-tracker-redis
-          type: redis
+          type: keyvalue
           property: port
 
       - key: SPRING_DATA_REDIS_PASSWORD
         fromService:
           name: gym-tracker-redis
-          type: redis
+          type: keyvalue
           property: password
 
-      # ── JWT secret — Render generates a cryptographically random value ───────
-      # IMPORTANT: if you want a stable secret across redeployments, set this
-      # manually in the Render dashboard instead of using generateValue.
+      # ── JWT ──────────────────────────────────────────────────
       - key: JWT_SECRET
         generateValue: true
 
-      # ── JVM flags ────────────────────────────────────────────────────────────
+      # ── JVM ──────────────────────────────────────────────────
       - key: JAVA_TOOL_OPTIONS
         value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
 
-  # ── MySQL Database ────────────────────────────────────────────────────────────
-  # Render's managed MySQL service. Connection details are injected into the
-  # web service above via `fromDatabase` references.
+  # ─────────────────────────────────────────────────────────────
+  # MySQL Private Service
+  # ─────────────────────────────────────────────────────────────
   - type: pserv
     name: gym-tracker-db
+    runtime: image
     plan: starter
-    databases:
-      - name: gymtracker
-        databaseName: gymtracker
-        user: gymuser
 
-  # ── Redis ─────────────────────────────────────────────────────────────────────
-  # Used for:
-  #   • Spring Cache (@Cacheable / @CacheEvict)
-  #   • Rate-limit token buckets (Bucket4j)
-  - type: redis
-    name: gym-tracker-redis
-    plan: starter
-    maxmemoryPolicy: allkeys-lru   # evict least-recently-used keys under memory pressure
-    ipAllowList: []                # empty = allow only internal Render services
+    image:
+      url: mysql:8.0
+
+    disk:
+    ipAllowList: []
